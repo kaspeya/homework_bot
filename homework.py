@@ -1,6 +1,8 @@
 import logging
 import os
+import sys
 import time
+from http import HTTPStatus
 from typing import Dict
 
 import requests
@@ -16,6 +18,14 @@ from exceptions import (EmptyHomeworkException, EmptyResponseException,
 
 load_dotenv()
 
+logging.basicConfig(
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    level=logging.INFO)
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
+handler = logging.StreamHandler(stream=sys.stdout)
+logger.addHandler(handler)
+
 PRACTICUM_TOKEN = os.getenv('PRACTICUM_TOKEN', None)
 TELEGRAM_TOKEN = os.getenv('TELEGRAM_TOKEN', None)
 TELEGRAM_CHAT_ID = os.getenv('TELEGRAM_CHAT_ID', None)
@@ -24,7 +34,7 @@ RETRY_TIME = 600
 ENDPOINT = 'https://practicum.yandex.ru/api/user_api/homework_statuses/'
 HEADERS = {'Authorization': f'OAuth {PRACTICUM_TOKEN}'}
 
-HOMEWORK_STATUSES = {
+VERDICT_STATUSES = {
     'approved': 'Работа проверена: ревьюеру всё понравилось. Ура!',
     'reviewing': 'Работа взята на проверку ревьюером.',
     'rejected': 'Работа проверена: у ревьюера есть замечания.'
@@ -50,12 +60,12 @@ HOMEWORK_EXCEPTIONS_TO_STR = {
 def check_tokens():
     """Проверям доступность переменных окружения."""
     try:
-        if (PRACTICUM_TOKEN is None) \
-                and (TELEGRAM_TOKEN is None) \
-                and (TELEGRAM_CHAT_ID is None):
+        if ((PRACTICUM_TOKEN is None)
+                and (TELEGRAM_TOKEN is None)
+                and (TELEGRAM_CHAT_ID is None)):
             raise Exception('Failed because token is not set.')
     except Exception as error:
-        logging.critical(
+        logger.critical(
             f'Ошибка, не задан токен в качетсве переменнох окружения: {error}'
         )
         return False
@@ -66,22 +76,22 @@ def check_tokens():
 def send_message(bot, message):
     """Отправляем сообщение."""
     try:
-        logging.info(f'Сообщение успешно отправлено. Сообщение: {message}')
+        logger.info(f'Сообщение успешно отправлено. Сообщение: {message}')
         bot.send_message(
             chat_id=TELEGRAM_CHAT_ID,
             text=message
         )
     except requests.exceptions.RequestException as error:
-        logging.error(f'Сбой при отправке сообщения: {error}')
+        logger.error(f'Сбой при отправке сообщения: {error}')
 
 
 def get_api_answer(current_timestamp):
     """Запрашиваем данные с сервера Практикума."""
-    timestamp = current_timestamp or int(time.time())
+    timestamp = current_timestamp
     params = {'from_date': timestamp}
     try:
         response = requests.get(ENDPOINT, headers=HEADERS, params=params)
-        if response.status_code != 200:
+        if response.status_code != HTTPStatus.OK:
             raise StatusCodeException('Неверный статус код.')
     except requests.exceptions.RequestException as error:
         raise YandexRequestException(repr(error))
@@ -108,26 +118,27 @@ def check_status(homework):
     if len(homework) == 0:
         raise EmptyHomeworkException('Пустая запись ДЗ.')
 
-    keys_required = ['homework_name']
-
-    for key in keys_required:
-        if key not in keys_required:
-            raise NoKeyInHomeworkException(f'В записи о ДЗ нет ключа {key}.')
+    if 'homework_name' not in homework:
+        raise NoKeyInHomeworkException(
+            'В записи о ДЗ нет ключа "homework_name".'
+        )
 
     hw_status = homework.get('status', 'unknown')
-    hw_status_text = HOMEWORK_STATUSES.get(hw_status, 'unknown_text')
+    hw_status_text = VERDICT_STATUSES.get(hw_status, None)
 
-    if hw_status_text == 'unknown_text':
+    if hw_status_text is None:
         raise WrongStatusInHomeworkException(
             f'Неизвестный статус ДЗ: {hw_status}.'
         )
 
 
 def parse_status(homework):
-    """Извлекаем из информации о конкретном ДЗ его статуc."""
+    """Эта функция исключительно для тестов.
+    Извлекаем из информации о конкретном ДЗ его статуc.
+    """
     check_status(homework)
     homework_name = homework['homework_name']
-    verdict = HOMEWORK_STATUSES[homework['status']]
+    verdict = VERDICT_STATUSES[homework['status']]
     return f'Изменился статус проверки работы "{homework_name}". {verdict}'
 
 
@@ -137,14 +148,14 @@ def parse_hw_with_error(homework):
         check_status(homework)
         return {**homework, 'error': 0}
     except WrongRecordHomeworkException as error:
-        logging.error(
+        logger.error(
             HOMEWORK_EXCEPTIONS_TO_STR[WrongRecordHomeworkException],
             error)
         return {
             'error': HOMEWORK_EXCEPTIONS_TO_STR[WrongRecordHomeworkException]
         }
     except EmptyHomeworkException as error:
-        logging.error(
+        logger.error(
             HOMEWORK_EXCEPTIONS_TO_STR[EmptyHomeworkException],
             error
         )
@@ -152,7 +163,7 @@ def parse_hw_with_error(homework):
             'error': HOMEWORK_EXCEPTIONS_TO_STR[EmptyHomeworkException]
         }
     except NoKeyInHomeworkException as error:
-        logging.error(
+        logger.error(
             HOMEWORK_EXCEPTIONS_TO_STR[NoKeyInHomeworkException],
             error
         )
@@ -160,7 +171,7 @@ def parse_hw_with_error(homework):
             'error': HOMEWORK_EXCEPTIONS_TO_STR[NoKeyInHomeworkException]
         }
     except WrongStatusInHomeworkException as error:
-        logging.error(
+        logger.error(
             HOMEWORK_EXCEPTIONS_TO_STR[WrongStatusInHomeworkException],
             error
         )
@@ -173,7 +184,7 @@ def parse_hw_with_error(homework):
 
 def process_yandex_api():
     """Проверяем ошибки связанные с API Yandex."""
-    current_timestamp = int(time.time())
+    current_timestamp = 0
     try:
         response_json = get_api_answer(current_timestamp)
         homeworks_list = check_response(response_json)
@@ -186,37 +197,37 @@ def process_yandex_api():
             'homeworks_state': homeworks_state_list
         }
     except YandexRequestException as error:
-        logging.error(EXCEPTION_TO_STR[YandexRequestException], error)
+        logger.error(EXCEPTION_TO_STR[YandexRequestException], error)
         return {
             'global_error': EXCEPTION_TO_STR[YandexRequestException],
             'homeworks_state': []
         }
     except StatusCodeException as error:
-        logging.error(EXCEPTION_TO_STR[StatusCodeException], error)
+        logger.error(EXCEPTION_TO_STR[StatusCodeException], error)
         return {
             'global_error': EXCEPTION_TO_STR[StatusCodeException],
             'homeworks_state': []
         }
     except EmptyResponseException as error:
-        logging.error(EXCEPTION_TO_STR[EmptyResponseException], error)
+        logger.error(EXCEPTION_TO_STR[EmptyResponseException], error)
         return {
             'global_error': EXCEPTION_TO_STR[EmptyResponseException],
             'homeworks_state': []
         }
     except WrongTypeResponseException as error:
-        logging.error(EXCEPTION_TO_STR[WrongTypeResponseException], error)
+        logger.error(EXCEPTION_TO_STR[WrongTypeResponseException], error)
         return {
             'global_error': EXCEPTION_TO_STR[WrongTypeResponseException],
             'homeworks_state': []
         }
     except NoKeyInResponseException as error:
-        logging.error(EXCEPTION_TO_STR[NoKeyInResponseException], error)
+        logger.error(EXCEPTION_TO_STR[NoKeyInResponseException], error)
         return {
             'global_error': EXCEPTION_TO_STR[NoKeyInResponseException],
             'homeworks_state': []
         }
     except WrongKeyTypeResponseException as error:
-        logging.error(EXCEPTION_TO_STR[WrongKeyTypeResponseException], error)
+        logger.error(EXCEPTION_TO_STR[WrongKeyTypeResponseException], error)
         return {
             'global_error': EXCEPTION_TO_STR[WrongKeyTypeResponseException],
             'homeworks_state': []
@@ -259,13 +270,13 @@ def process_homework_changes(new_hw_state, homeworks_storage):
             msg_list.append(
                 f'Изменился статус проверки работы'
                 f' "{new_hw_state["homework_name"]}".'
-                f'{HOMEWORK_STATUSES[new_hw_state["status"]]}')
+                f'{VERDICT_STATUSES[new_hw_state["status"]]}')
             if new_hw_state['status'] == "unknown":
                 msg_list.append(
                     f'Неопределённый статус домашки:'
                     f' {new_hw_state["homework_name"]}.')
 
-            homeworks_storage['homeworks_state'][new_homework_name] =\
+            homeworks_storage['homeworks_state'][new_homework_name] = \
                 new_hw_state
     return homeworks_storage, msg_list
 
@@ -275,12 +286,12 @@ def control_state(new_homeworks_state, homeworks_storage):
     if new_homeworks_state['global_error'] == \
             homeworks_storage['global_error']:
         if new_homeworks_state['global_error'] != 0:
-            logging.debug('Статус не изменился: Глобальная ошибка')
+            logger.debug('Статус не изменился: Глобальная ошибка')
             return [homeworks_storage, []]
 
     else:
         if new_homeworks_state['global_error'] != 0:
-            homeworks_storage['global_error'] =\
+            homeworks_storage['global_error'] = \
                 new_homeworks_state['global_error']
             return [
                 homeworks_storage,
@@ -297,7 +308,7 @@ def control_state(new_homeworks_state, homeworks_storage):
         hw_messages_list += msg_list
 
     if len(hw_messages_list) == 0:
-        logging.debug('Статус не изменился.')
+        logger.debug('Статус не изменился.')
 
     return homeworks_storage, hw_messages_list
 
@@ -305,15 +316,15 @@ def control_state(new_homeworks_state, homeworks_storage):
 def bot_startup(homework_storage: Dict) -> Dict:
     """Заполняем словарь с ДЗ, с которым впоследствии будем сравнивать."""
     new_hw_state = process_yandex_api()
-    homework_storage, _ = control_state(
-        new_homeworks_state=new_hw_state,
-        homeworks_storage=homework_storage
-    )
+    homework_storage, _ = control_state(new_homeworks_state=new_hw_state,
+                                        homeworks_storage=homework_storage)
     return homework_storage
 
 
 def bot_process(homework_storage: Dict, bot) -> Dict:
-    """Перезаписываем словарь с ДЗ, с которым впоследствии будем сравнивать."""
+    """Перезаписываем словарь с ДЗ, с которым впоследствии будем сравнивать.
+    Отправляем сообщение в случае наличия их в message_list
+    """
     new_hw_state = process_yandex_api()
     homework_storage, message_list = control_state(
         new_homeworks_state=new_hw_state,
@@ -339,4 +350,5 @@ def main():
 
     while True:
         time.sleep(RETRY_TIME)
+        print(homework_storage)
         homework_storage = bot_process(homework_storage, bot)
