@@ -61,12 +61,12 @@ def check_tokens():
     """Проверям доступность переменных окружения."""
     try:
         if ((PRACTICUM_TOKEN is None)
-                and (TELEGRAM_TOKEN is None)
-                and (TELEGRAM_CHAT_ID is None)):
+                or (TELEGRAM_TOKEN is None)
+                or (TELEGRAM_CHAT_ID is None)):
             raise Exception('Failed because token is not set.')
     except Exception as error:
         logger.critical(
-            f'Ошибка, не задан токен в качетсве переменнох окружения: {error}'
+            f'Ошибка, не задан токен в качетсве переменной окружения: {error}'
         )
         return False
     else:
@@ -262,37 +262,40 @@ def process_homework_changes(new_hw_state, homeworks_storage):
             # Если новая домашка с неизвестным статусом - сообщить об ошибке
             if new_hw_state['status'] == 'unknown':
                 msg_list.append(
-                    f'Новый статус домашки'
+                    'Новый статус домашки'
                     f' {new_hw_state["homework_name"]} не определён!')
             return homeworks_storage, msg_list
 
         if new_hw_state['status'] != old_hw_state_founded['status']:
             msg_list.append(
-                f'Изменился статус проверки работы'
+                'Изменился статус проверки работы'
                 f' "{new_hw_state["homework_name"]}".'
                 f'{VERDICT_STATUSES[new_hw_state["status"]]}')
             if new_hw_state['status'] == "unknown":
                 msg_list.append(
-                    f'Неопределённый статус домашки:'
+                    'Неопределённый статус домашки:'
                     f' {new_hw_state["homework_name"]}.')
 
-            homeworks_storage['homeworks_state'][new_homework_name] = \
-                new_hw_state
+            [
+                homeworks_storage['homeworks_state'][new_homework_name]
+            ] = new_hw_state
     return homeworks_storage, msg_list
 
 
 def control_state(new_homeworks_state, homeworks_storage):
     """Основная логика работы бота."""
-    if new_homeworks_state['global_error'] == \
-            homeworks_storage['global_error']:
+    if new_homeworks_state[
+        'global_error'
+    ] == homeworks_storage['global_error']:
         if new_homeworks_state['global_error'] != 0:
             logger.debug('Статус не изменился: Глобальная ошибка')
             return [homeworks_storage, []]
 
     else:
         if new_homeworks_state['global_error'] != 0:
-            homeworks_storage['global_error'] = \
+            homeworks_storage['global_error'] = [
                 new_homeworks_state['global_error']
+            ]
             return [
                 homeworks_storage,
                 [f'Global error {homeworks_storage["global_error"]}']
@@ -350,5 +353,4 @@ def main():
 
     while True:
         time.sleep(RETRY_TIME)
-        print(homework_storage)
         homework_storage = bot_process(homework_storage, bot)
