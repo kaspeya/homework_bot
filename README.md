@@ -3,6 +3,10 @@ python telegram bot
 
 # Социальная сеть
 [![Python](https://img.shields.io/badge/-Python-464646?style=flat&logo=Python&logoColor=ffffff&color=043A6B)](https://www.python.org/)
+.. image:: https://raw.githubusercontent.com/python-telegram-bot/logos/master/logo-text/png/ptb-logo-text_768.png
+   :align: center
+   :target: https://python-telegram-bot.org
+   :alt: python-telegram-bot Logo
 [![python-telegram-bot](https://img.shields.io/badge/-python-telegram-bot-464646?style=flat-square&logo=python-telegram-bot&logoColor=ffffff&color=043A6B)](https://python-telegram-bot.org/)
 
 ## Описание проекта
