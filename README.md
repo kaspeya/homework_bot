@@ -6,8 +6,8 @@
 Python Telegram Bot для проверки статуса ревью, который обращается к API сервиса Практикум.Домашка 
 
 У API Практикум.Домашка есть лишь один эндпоинт: https://practicum.yandex.ru/api/user_api/homework_statuses/ и доступ к нему возможен только по токену.
-Получить токен можно по адресу: https://oauth.yandex.ru/authorize?response_type=token&client_id=1d0b9dd4d652455a9eb710d450ff456a.br>
-Принцип работы API
+Получить токен можно по адресу: https://oauth.yandex.ru/authorize?response_type=token&client_id=1d0b9dd4d652455a9eb710d450ff456a.
+  Принцип работы API
 Когда ревьюер проверяет проект, он присваивает ей один из статусов: 
 работа принята на проверку,
 работа возвращена для исправления ошибок,
