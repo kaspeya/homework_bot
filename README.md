@@ -1,6 +1,12 @@
 # Homework_bot
 [![Python](https://img.shields.io/badge/-Python-464646?style=flat&logo=Python&logoColor=ffffff&color=043A6B)](https://www.python.org/)
-[![PyPI version][pypi_badge]][pypi_link]
+.. image:: https://img.shields.io/pypi/v/python-telegram-bot-raw.svg
+   :target: https://pypi.org/project/python-telegram-bot-raw/
+   :alt: PyPi Package Version
+
+.. image:: https://img.shields.io/pypi/pyversions/python-telegram-bot-raw.svg
+   :target: https://pypi.org/project/python-telegram-bot-raw/
+   :alt: Supported Python versions
 [python-telegram-bot](https://python-telegram-bot.org)
 
 ## Описание проекта
