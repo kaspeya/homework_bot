@@ -1,6 +1,6 @@
 # Homework_bot
 [![Python](https://img.shields.io/badge/-Python-464646?style=flat&logo=Python&logoColor=ffffff&color=043A6B)](https://www.python.org/)
-[![python-telegram-bot](https://avatars.githubusercontent.com/u/16178365?s=48&v=4)](https://python-telegram-bot.org)
+[![python-telegram-bot](https://raw.githubusercontent.com/python-telegram-bot/logos/master/logo-text/png/ptb-logo-text_768.png)](https://python-telegram-bot.org)
 
 ## Описание проекта
 Python Telegram Bot для проверки статуса проекта, который обращается к API сервиса Практикум.Домашка 
